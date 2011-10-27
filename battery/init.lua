@@ -44,17 +44,11 @@ local backend = "acpi"
 get_data = nil
 
 local function init()
-    local rv = os.execute("acpiconf")
-    if rv == 0 then
-        backend = "acpiconf"
-        return
-    end
-
-    local rv = os.execute("acpitool")
-    if rv == 0 then
-        backend = "acpitool"
-        return
-    end
+    --local rv = os.execute("acpitool")
+    --if rv == 0 then
+    --    backend = "acpitool"
+    --    return
+    --end
 
     rv = os.execute("acpi")
     if rv == 0 then
@@ -77,22 +71,7 @@ function get_data()
     rv.charge = nil
     rv.time = "00:00"
 
-    if backend == "acpiconf" then
-        local fd = io.popen("acpiconf -i0")
-        for l in fd:lines() do
-            if l:match("^Remaining capacity") then
-                rv.charge = tonumber(l:match("\t(%d?%d?%d)"))
-            elseif l:match("^Remaining time") then
-                rv.time = l:match("\t(%S+)")
-                if rv.time == "unknown" then
-                    rv.time = ""
-                end
-            elseif l:match("^State") then
-                rv.state = l:match("\t(%S+)")
-            end
-        end
-        fd:close()
-    elseif backend == "acpi" or backend == "acpitool" then
+    if backend == "acpi" or backend == "acpitool" then
         local fd = io.popen(backend .. " -b")
         if not fd then return end
 
@@ -162,18 +141,7 @@ end
 
 local function detail ()
     local fd = nil
-    if backend == "acpiconf" then
-        local str = ""
-        fd = io.popen("sysctl hw.acpi.thermal")
-        for l in fd:lines() do
-            if l:match("tz%d%.temperature") then
-                str = str .. "\n" .. l
-            end
-        end
-        fd:close()
-        naughty.notify({ text = str:gsub("^\n", ""), screen = capi.mouse.screen })
-        return
-    elseif backend == "acpi" then
+    if backend == "acpi" then
         fd = io.popen("acpi -bta")
     elseif backend == "acpitool" then
         fd = io.popen("acpitool")
